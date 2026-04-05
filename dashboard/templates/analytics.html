@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+
+{% block title %}DiffusionBot — Analytics{% endblock %}
+{% block nav_analytics %}active{% endblock %}
+{% block page_title %}Analytics{% endblock %}
+
+{% block content %}
+<!-- Info banner -->
+<div class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
+    <p class="text-sm text-blue-700">
+        Les donnees analytics sont collectees par le <strong>Worker Analytics</strong> (cron hebdomadaire) depuis GA4, Google Search Console et Moz API.
+        Configurez les IDs GA4 et GSC dans les parametres de chaque projet.
+    </p>
+</div>
+
+<!-- KPIs analytics -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8"
+     hx-get="/dashboard/api/partials/analytics-kpis"
+     hx-trigger="load"
+     hx-swap="innerHTML">
+    <div class="kpi-card">
+        <div class="kpi-value" id="kpi-sessions">-</div>
+        <div class="kpi-label">Sessions via backlinks</div>
+        <div class="kpi-trend neutral">cette semaine</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-value" id="kpi-users">-</div>
+        <div class="kpi-label">Utilisateurs uniques</div>
+        <div class="kpi-trend neutral">via UTM</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-value" id="kpi-clicks">-</div>
+        <div class="kpi-label">Clics GSC</div>
+        <div class="kpi-trend neutral">cette semaine</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-value" id="kpi-avg-pos">-</div>
+        <div class="kpi-label">Position moyenne</div>
+        <div class="kpi-trend neutral">pages avec backlinks</div>
+    </div>
+</div>
+
+<!-- Charts -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+    <div class="chart-container">
+        <h3>Traffic UTM par plateforme</h3>
+        <div style="height: 300px;">
+            <canvas id="chart-traffic-platform"></canvas>
+        </div>
+    </div>
+    <div class="chart-container">
+        <h3>Evolution positions GSC</h3>
+        <div style="height: 300px;">
+            <canvas id="chart-positions"></canvas>
+        </div>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+    <div class="chart-container">
+        <h3>Correlation: backlinks vs positions</h3>
+        <div style="height: 300px;">
+            <canvas id="chart-correlation"></canvas>
+        </div>
+    </div>
+    <div class="chart-container">
+        <h3>Evolution DA de nos domaines</h3>
+        <div style="height: 300px;">
+            <canvas id="chart-our-da"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- ROI table -->
+<div class="chart-container">
+    <h3>ROI par plateforme</h3>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Plateforme</th>
+                <th>Posts publies</th>
+                <th>Sessions generees</th>
+                <th>Sessions / post</th>
+                <th>Taux survie</th>
+                <th>Score ROI</th>
+            </tr>
+        </thead>
+        <tbody id="roi-table-body">
+            <tr>
+                <td colspan="6" class="text-center text-gray-400 py-8">
+                    Donnees disponibles apres le premier run du Worker Analytics
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="/static/js/charts.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Traffic by platform
+    fetch('/dashboard/api/chart/traffic-by-platform')
+        .then(r => r.json())
+        .then(data => {
+            createBarChart('chart-traffic-platform', data.labels, [{
+                label: 'Sessions',
+                data: data.values,
+                backgroundColor: CHART_COLORS.primary,
+                borderRadius: 6,
+            }]);
+        }).catch(() => {});
+
+    // Positions evolution
+    fetch('/dashboard/api/chart/positions')
+        .then(r => r.json())
+        .then(data => {
+            createLineChart('chart-positions', data.labels, [{
+                label: 'Position moyenne',
+                data: data.values,
+                borderColor: CHART_COLORS.success,
+                backgroundColor: CHART_COLORS.successBg,
+                fill: true,
+            }]);
+        }).catch(() => {});
+
+    // Our DA evolution
+    fetch('/dashboard/api/chart/our-da')
+        .then(r => r.json())
+        .then(data => {
+            const datasets = data.projects.map((p, i) => ({
+                label: p.name,
+                data: p.values,
+                borderColor: [CHART_COLORS.primary, CHART_COLORS.success, CHART_COLORS.info, CHART_COLORS.warning][i % 4],
+                fill: false,
+            }));
+            createLineChart('chart-our-da', data.labels, datasets);
+        }).catch(() => {});
+});
+</script>
+{% endblock %}

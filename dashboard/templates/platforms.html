@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block title %}DiffusionBot — Plateformes{% endblock %}
+{% block nav_platforms %}active{% endblock %}
+{% block page_title %}Plateformes{% endblock %}
+
+{% block content %}
+<div class="chart-container">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Plateforme</th>
+                <th>Type</th>
+                <th>DA</th>
+                <th>Score</th>
+                <th>Dofollow</th>
+                <th>Difficulte</th>
+                <th>Actif</th>
+                <th>Posts</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for p in plateformes %}
+            <tr>
+                <td>
+                    <div class="font-medium">{{ p.nom }}</div>
+                    <div class="text-xs text-gray-400">{{ p.url_base }}</div>
+                </td>
+                <td><span class="text-xs text-gray-500">{{ p.type_contenu }}</span></td>
+                <td>
+                    {% if p.da_actuel %}
+                    <span class="font-semibold {{ 'text-green-600' if p.da_actuel >= 50 else 'text-yellow-600' if p.da_actuel >= 20 else 'text-gray-500' }}">
+                        {{ p.da_actuel | round(0) | int }}
+                    </span>
+                    {% else %}<span class="text-gray-400">-</span>{% endif %}
+                </td>
+                <td>
+                    {% if p.score_composite %}
+                    <div class="flex items-center gap-2">
+                        <div class="w-16 bg-gray-200 rounded-full h-2">
+                            <div class="h-2 rounded-full {{ 'bg-green-500' if p.score_composite >= 60 else 'bg-yellow-500' if p.score_composite >= 30 else 'bg-red-500' }}"
+                                 style="width: {{ p.score_composite }}%"></div>
+                        </div>
+                        <span class="text-xs font-medium">{{ p.score_composite | round(1) }}</span>
+                    </div>
+                    {% else %}<span class="text-gray-400">-</span>{% endif %}
+                </td>
+                <td>
+                    <span class="badge {{ 'badge-dofollow' if p.dofollow else 'badge-nofollow' }}">
+                        {{ 'dofollow' if p.dofollow else 'nofollow' }}
+                    </span>
+                </td>
+                <td>
+                    <span class="text-xs {{ 'text-green-600' if p.difficulte_posting == 'facile' else 'text-yellow-600' if p.difficulte_posting == 'moyen' else 'text-red-600' }}">
+                        {{ p.difficulte_posting }}
+                    </span>
+                </td>
+                <td>
+                    <span class="inline-block w-2 h-2 rounded-full {{ 'bg-green-400' if p.actif else 'bg-gray-300' }}"></span>
+                </td>
+                <td class="text-center text-sm">{{ p.posts | length }}</td>
+            </tr>
+            {% endfor %}
+            {% if not plateformes %}
+            <tr>
+                <td colspan="8" class="text-center text-gray-400 py-8">Aucune plateforme enregistree</td>
+            </tr>
+            {% endif %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

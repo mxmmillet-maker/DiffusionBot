@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+{% block title %}DiffusionBot — Posts{% endblock %}
+{% block nav_posts %}active{% endblock %}
+{% block page_title %}Posts{% endblock %}
+
+{% block content %}
+<!-- Filters -->
+<div class="bg-white rounded-xl border border-gray-200 p-4 mb-6">
+    <form class="flex flex-wrap gap-4 items-end" hx-get="/dashboard/posts" hx-target="#posts-table" hx-swap="innerHTML" hx-push-url="true">
+        <div>
+            <label class="block text-xs font-medium text-gray-500 mb-1">Statut</label>
+            <select name="statut" class="border border-gray-300 rounded-lg px-3 py-1.5 text-sm">
+                <option value="">Tous</option>
+                <option value="publie">Publie</option>
+                <option value="planifie">Planifie</option>
+                <option value="erreur">Erreur</option>
+                <option value="supprime">Supprime</option>
+                <option value="404">404</option>
+            </select>
+        </div>
+        <div>
+            <label class="block text-xs font-medium text-gray-500 mb-1">Plateforme</label>
+            <input type="text" name="plateforme" placeholder="Filtrer..." class="border border-gray-300 rounded-lg px-3 py-1.5 text-sm w-36">
+        </div>
+        <div>
+            <label class="block text-xs font-medium text-gray-500 mb-1">Projet</label>
+            <input type="text" name="projet" placeholder="Filtrer..." class="border border-gray-300 rounded-lg px-3 py-1.5 text-sm w-36">
+        </div>
+        <button type="submit" class="bg-brand-600 text-white px-4 py-1.5 rounded-lg text-sm hover:bg-brand-700">Filtrer</button>
+    </form>
+</div>
+
+<!-- Posts table -->
+<div class="chart-container" id="posts-table">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Titre</th>
+                <th>Plateforme</th>
+                <th>Projet</th>
+                <th>Statut</th>
+                <th>Dofollow</th>
+                <th>Tentatives</th>
+                <th>Lien</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for post in posts %}
+            <tr>
+                <td class="text-gray-500 whitespace-nowrap">{{ post.publie_at.strftime('%d/%m/%Y %H:%M') if post.publie_at else post.created_at.strftime('%d/%m/%Y %H:%M') if post.created_at else '-' }}</td>
+                <td class="max-w-xs">
+                    <div class="truncate" title="{{ post.titre_adapte or '-' }}">{{ post.titre_adapte or '-' }}</div>
+                    {% if post.erreur_detail %}
+                    <div class="text-xs text-red-500 truncate mt-0.5" title="{{ post.erreur_detail }}">{{ post.erreur_detail[:60] }}</div>
+                    {% endif %}
+                </td>
+                <td class="font-medium">{{ post.plateforme.nom if post.plateforme else '-' }}</td>
+                <td>
+                    {% if post.projet %}
+                    <a href="/dashboard/project/{{ post.projet.slug }}" class="text-brand-600 hover:underline">{{ post.projet.nom }}</a>
+                    {% else %}-{% endif %}
+                </td>
+                <td><span class="badge badge-{{ post.statut }}">{{ post.statut }}</span></td>
+                <td>
+                    {% if post.dofollow_confirme is not none %}
+                    <span class="badge {{ 'badge-dofollow' if post.dofollow_confirme else 'badge-nofollow' }}">
+                        {{ 'dofollow' if post.dofollow_confirme else 'nofollow' }}
+                    </span>
+                    {% else %}<span class="text-gray-400">-</span>{% endif %}
+                </td>
+                <td class="text-center">{{ post.tentatives }}</td>
+                <td>
+                    {% if post.url_publie %}
+                    <a href="{{ post.url_publie }}" target="_blank" class="text-brand-600 hover:underline text-xs">ouvrir</a>
+                    {% else %}-{% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+            {% if not posts %}
+            <tr>
+                <td colspan="8" class="text-center text-gray-400 py-8">Aucun post</td>
+            </tr>
+            {% endif %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

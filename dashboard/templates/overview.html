@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+
+{% block title %}DiffusionBot — Overview{% endblock %}
+{% block nav_overview %}active{% endblock %}
+{% block page_title %}Overview{% endblock %}
+
+{% block nav_projects %}
+{% for p in projets %}
+<a href="/dashboard/project/{{ p.slug }}" class="nav-link text-sm">
+    <span class="w-2 h-2 rounded-full {{ 'bg-green-400' if p.actif else 'bg-gray-500' }} mr-3 flex-shrink-0"></span>
+    {{ p.nom }}
+</a>
+{% endfor %}
+{% endblock %}
+
+{% block content %}
+<!-- KPI Cards -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"
+     hx-get="/dashboard/api/partials/kpis"
+     hx-trigger="every 60s"
+     hx-swap="innerHTML">
+    {% include "partials/_kpi_cards.html" %}
+</div>
+
+<!-- Charts row -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+    <div class="chart-container">
+        <h3>Backlinks actifs (30 jours)</h3>
+        <div style="height: 280px;">
+            <canvas id="chart-backlinks"></canvas>
+        </div>
+    </div>
+    <div class="chart-container">
+        <h3>Repartition des statuts</h3>
+        <div style="height: 280px;">
+            <canvas id="chart-status"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Recent activity -->
+<div class="chart-container">
+    <div class="flex items-center justify-between mb-4">
+        <h3 class="!mb-0">Activite recente</h3>
+        <a href="/dashboard/posts" class="text-sm text-brand-600 hover:text-brand-700">Voir tout</a>
+    </div>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Contenu</th>
+                <th>Plateforme</th>
+                <th>Projet</th>
+                <th>Statut</th>
+                <th>Lien</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for post in recent_posts %}
+            <tr>
+                <td class="text-gray-500 whitespace-nowrap">{{ post.created_at.strftime('%d/%m %H:%M') if post.created_at else '-' }}</td>
+                <td class="max-w-xs truncate">{{ post.titre_adapte or '-' }}</td>
+                <td>
+                    {% if post.plateforme %}
+                    <span class="font-medium">{{ post.plateforme.nom }}</span>
+                    {% else %}-{% endif %}
+                </td>
+                <td>
+                    {% if post.projet %}
+                    <a href="/dashboard/project/{{ post.projet.slug }}" class="text-brand-600 hover:underline">{{ post.projet.nom }}</a>
+                    {% else %}-{% endif %}
+                </td>
+                <td><span class="badge badge-{{ post.statut }}">{{ post.statut }}</span></td>
+                <td>
+                    {% if post.url_publie %}
+                    <a href="{{ post.url_publie }}" target="_blank" class="text-brand-600 hover:underline text-xs">voir</a>
+                    {% else %}-{% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+            {% if not recent_posts %}
+            <tr>
+                <td colspan="6" class="text-center text-gray-400 py-8">Aucun post pour le moment</td>
+            </tr>
+            {% endif %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="/static/js/charts.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Backlinks chart (placeholder data, will be replaced by API)
+    fetch('/dashboard/api/chart/backlinks')
+        .then(r => r.json())
+        .then(data => {
+            createLineChart('chart-backlinks', data.labels, [{
+                label: 'Backlinks actifs',
+                data: data.values,
+                borderColor: CHART_COLORS.primary,
+                backgroundColor: CHART_COLORS.primaryBg,
+                fill: true,
+            }]);
+        })
+        .catch(() => {
+            // Fallback: empty chart
+            createLineChart('chart-backlinks', ['Pas de donnees'], [{
+                label: 'Backlinks actifs', data: [0],
+                borderColor: CHART_COLORS.gray, backgroundColor: 'transparent',
+            }]);
+        });
+
+    // Status doughnut
+    fetch('/dashboard/api/chart/status')
+        .then(r => r.json())
+        .then(data => {
+            createDoughnutChart('chart-status', data.labels, data.values, data.colors);
+        })
+        .catch(() => {
+            createDoughnutChart('chart-status',
+                ['Publie', 'Erreur', 'Planifie'],
+                [{{ stats.alive_links }}, {{ stats.dead_links }}, {{ stats.total_posts - stats.alive_links - stats.dead_links }}],
+                [CHART_COLORS.success, CHART_COLORS.danger, CHART_COLORS.info]
+            );
+        });
+});
+</script>
+{% endblock %}

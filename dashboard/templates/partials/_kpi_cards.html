@@ -1,0 +1,26 @@
+<div class="kpi-card">
+    <div class="kpi-value">{{ stats.alive_links }}</div>
+    <div class="kpi-label">Backlinks actifs</div>
+    <div class="kpi-trend neutral">sur {{ stats.total_posts }} total</div>
+</div>
+<div class="kpi-card">
+    <div class="kpi-value">{{ stats.posts_today }}</div>
+    <div class="kpi-label">Posts aujourd'hui</div>
+    <div class="kpi-trend neutral">{{ stats.projects_active }} projet{{ 's' if stats.projects_active > 1 else '' }} actif{{ 's' if stats.projects_active > 1 else '' }}</div>
+</div>
+<div class="kpi-card">
+    <div class="kpi-value">{{ stats.dofollow_count }}</div>
+    <div class="kpi-label">Dofollow</div>
+    <div class="kpi-trend {{ 'up' if stats.dofollow_count > stats.nofollow_count else 'neutral' }}">
+        {% if stats.dofollow_count + stats.nofollow_count > 0 %}
+            {{ (stats.dofollow_count * 100 / (stats.dofollow_count + stats.nofollow_count)) | round(0) | int }}% du total verifie
+        {% else %}
+            aucun verifie
+        {% endif %}
+    </div>
+</div>
+<div class="kpi-card">
+    <div class="kpi-value">{{ stats.platforms_active }}</div>
+    <div class="kpi-label">Plateformes actives</div>
+    <div class="kpi-trend {{ 'down' if stats.dead_links > 0 else 'neutral' }}">{{ stats.dead_links }} lien{{ 's' if stats.dead_links > 1 else '' }} mort{{ 's' if stats.dead_links > 1 else '' }}</div>
+</div>

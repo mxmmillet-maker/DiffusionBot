@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+
+{% block title %}DiffusionBot — {{ projet.nom }}{% endblock %}
+{% block page_title %}{{ projet.nom }}{% endblock %}
+
+{% block content %}
+<!-- Project info -->
+<div class="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+    <div class="flex items-start justify-between">
+        <div>
+            <h3 class="text-lg font-semibold text-gray-800">{{ projet.nom }}</h3>
+            <p class="text-sm text-gray-500 mt-1">{{ projet.domaine }} &mdash; {{ projet.url_base }}</p>
+            {% if projet.thematiques %}
+            <div class="flex gap-2 mt-2">
+                {% for tag in projet.thematiques %}
+                <span class="bg-gray-100 text-gray-600 text-xs px-2 py-0.5 rounded">{{ tag }}</span>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+        <div class="text-right">
+            <div class="text-sm text-gray-500">Rythme: <span class="font-medium">{{ projet.rythme_diffusion_jour }} posts/jour</span></div>
+            <div class="text-sm text-gray-500 mt-1">
+                GA4: {{ projet.ga4_property_id or 'non configure' }} |
+                GSC: {{ 'configure' if projet.gsc_site_url else 'non configure' }}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- KPIs projet -->
+{% set total = posts | length %}
+{% set publies = posts | selectattr('statut', 'equalto', 'publie') | list | length %}
+{% set erreurs = posts | selectattr('statut', 'equalto', 'erreur') | list | length %}
+<div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+    <div class="kpi-card">
+        <div class="kpi-value">{{ total }}</div>
+        <div class="kpi-label">Total posts</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-value text-green-600">{{ publies }}</div>
+        <div class="kpi-label">Backlinks actifs</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-value text-red-600">{{ erreurs }}</div>
+        <div class="kpi-label">Erreurs</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-value">
+            {% if total > 0 %}{{ (publies * 100 / total) | round(0) | int }}%{% else %}-{% endif %}
+        </div>
+        <div class="kpi-label">Taux de succes</div>
+    </div>
+</div>
+
+<!-- Charts -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    <div class="chart-container">
+        <h3>Evolution DA du domaine</h3>
+        <div style="height: 250px;">
+            <canvas id="chart-project-da"></canvas>
+        </div>
+    </div>
+    <div class="chart-container">
+        <h3>Traffic via backlinks (UTM)</h3>
+        <div style="height: 250px;">
+            <canvas id="chart-project-traffic"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Posts du projet -->
+<div class="chart-container">
+    <h3>Derniers posts</h3>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Titre</th>
+                <th>Plateforme</th>
+                <th>Statut</th>
+                <th>Dofollow</th>
+                <th>Lien</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for post in posts[:50] %}
+            <tr>
+                <td class="text-gray-500 whitespace-nowrap">{{ post.publie_at.strftime('%d/%m/%Y') if post.publie_at else '-' }}</td>
+                <td class="max-w-xs truncate">{{ post.titre_adapte or '-' }}</td>
+                <td class="font-medium">{{ post.plateforme.nom if post.plateforme else '-' }}</td>
+                <td><span class="badge badge-{{ post.statut }}">{{ post.statut }}</span></td>
+                <td>
+                    {% if post.dofollow_confirme is not none %}
+                    <span class="badge {{ 'badge-dofollow' if post.dofollow_confirme else 'badge-nofollow' }}">
+                        {{ 'dofollow' if post.dofollow_confirme else 'nofollow' }}
+                    </span>
+                    {% else %}-{% endif %}
+                </td>
+                <td>
+                    {% if post.url_publie %}
+                    <a href="{{ post.url_publie }}" target="_blank" class="text-brand-600 hover:underline text-xs">ouvrir</a>
+                    {% else %}-{% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="/static/js/charts.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // DA chart (data from API, placeholder for now)
+    fetch('/dashboard/api/chart/project-da/{{ projet.slug }}')
+        .then(r => r.json())
+        .then(data => {
+            createLineChart('chart-project-da', data.labels, [{
+                label: 'Domain Authority',
+                data: data.values,
+                borderColor: CHART_COLORS.primary,
+                backgroundColor: CHART_COLORS.primaryBg,
+                fill: true,
+            }]);
+        })
+        .catch(() => {
+            createLineChart('chart-project-da', ['Pas de donnees'], [{
+                label: 'DA', data: [0], borderColor: CHART_COLORS.gray,
+            }]);
+        });
+
+    // Traffic chart
+    fetch('/dashboard/api/chart/project-traffic/{{ projet.slug }}')
+        .then(r => r.json())
+        .then(data => {
+            createLineChart('chart-project-traffic', data.labels, [{
+                label: 'Sessions UTM',
+                data: data.values,
+                borderColor: CHART_COLORS.success,
+                backgroundColor: CHART_COLORS.successBg,
+                fill: true,
+            }]);
+        })
+        .catch(() => {
+            createLineChart('chart-project-traffic', ['Pas de donnees'], [{
+                label: 'Sessions', data: [0], borderColor: CHART_COLORS.gray,
+            }]);
+        });
+});
+</script>
+{% endblock %}
